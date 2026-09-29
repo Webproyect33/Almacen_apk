@@ -20,8 +20,6 @@ jobs:
             echo "Descomprimiendo archivo .zip..."
             unzip -o *.zip
             rm -f *.zip || true
-          else
-            echo "Sin archivo .zip adicional, continuando..."
           fi
 
       - name: Configurar Node.js
@@ -29,26 +27,21 @@ jobs:
         with:
           node-version: 20
 
-      - name: Configurar Java JDK 21 (Requerido para Android Gradle)
+      - name: Configurar Java JDK 17 (Estándar para Android 34)
         uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
-          java-version: 21
+          java-version: 17
 
-      - name: Aceptar licencias y preparar SDK Android
-        run: |
-          yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --licenses || true
-          "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platforms;android-34" "platforms;android-35" "build-tools;34.0.0" || true
-
-      - name: Instalar librerías
+      - name: Instalar dependencias del proyecto
         run: npm install
 
       - name: Compilar aplicación web
         run: npm run build
 
-      - name: Configurar Capacitor Android
+      - name: Instalar Capacitor 6 Android (Compatible y Estable)
         run: |
-          npm install @capacitor/core @capacitor/cli @capacitor/android
+          npm install @capacitor/core@6.2.0 @capacitor/cli@6.2.0 @capacitor/android@6.2.0
           npx cap add android || true
           npx cap sync android
 
@@ -56,12 +49,13 @@ jobs:
         run: |
           cd android
           echo "sdk.dir=$ANDROID_HOME" > local.properties
+          echo "org.gradle.jvmargs=-Xmx2048m -XX:MaxMetaspaceSize=512m" >> gradle.properties
           chmod +x gradlew
-          ./gradlew assembleDebug --no-daemon --stacktrace
+          ./gradlew assembleDebug --no-daemon
 
       - name: Publicar archivo APK para descargar
         uses: actions/upload-artifact@v4
         with:
           name: Broters_Almacen-APK
-          path: android/app/build/outputs/apk/**/*.apk
+          path: android/app/build/outputs/apk/debug/app-debug.apk
           retention-days: 14
