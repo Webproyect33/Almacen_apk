@@ -1,0 +1,66 @@
+name: Compilar APK Android
+
+on:
+  push:
+    branches: [ "**" ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: Generar APK de Broters_Almacen
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Descargar repositorio (Checkout)
+        uses: actions/checkout@v4
+
+      - name: Descomprimir archivo ZIP si existe
+        run: |
+          if ls *.zip 1> /dev/null 2>&1; then
+            echo "Se detectó archivo .zip. Descomprimiendo en el proyecto..."
+            unzip -o *.zip
+            rm -f *.zip || true
+          else
+            echo "No se encontró ningún archivo .zip, procediendo con los archivos existentes."
+          fi
+
+      - name: Configurar Node.js (v20)
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Configurar Java JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: 17
+
+      - name: Configurar Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Instalar dependencias del proyecto
+        run: npm install
+
+      - name: Compilar aplicación web
+        run: npm run build
+
+      - name: Instalar y preparar Capacitor Android
+        run: |
+          npm install @capacitor/core @capacitor/cli @capacitor/android
+          npx cap add android || true
+          npx cap sync android
+
+      - name: Dar permisos de ejecución a Gradle
+        run: chmod +x android/gradlew
+
+      - name: Compilar APK en modo Debug
+        run: |
+          cd android
+          ./gradlew assembleDebug --no-daemon
+
+      - name: Guardar y publicar el APK (.apk)
+        uses: actions/upload-artifact@v4
+        with:
+          name: Broters_Almacen-APK
+          path: android/app/build/outputs/apk/debug/app-debug.apk
+          retention-days: 14
