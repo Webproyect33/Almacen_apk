@@ -14,7 +14,7 @@ jobs:
       - name: Descargar repositorio
         uses: actions/checkout@v4
 
-      - name: Descomprimir archivo ZIP
+      - name: Descomprimir archivo ZIP si existe
         run: |
           if ls *.zip 1> /dev/null 2>&1; then
             echo "Descomprimiendo archivo .zip..."
@@ -24,20 +24,21 @@ jobs:
             echo "Sin archivo .zip adicional, continuando..."
           fi
 
-      - name: Configurar Node.js en la nube
+      - name: Configurar Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 20
 
-      - name: Configurar Java JDK 17
+      - name: Configurar Java JDK 21 (Requerido para Android Gradle)
         uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
-          java-version: 17
+          java-version: 21
 
-      - name: Aceptar licencias del SDK de Android
+      - name: Aceptar licencias y preparar SDK Android
         run: |
           yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --licenses || true
+          "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platforms;android-34" "platforms;android-35" "build-tools;34.0.0" || true
 
       - name: Instalar librerías
         run: npm install
@@ -54,12 +55,13 @@ jobs:
       - name: Compilar APK Android
         run: |
           cd android
+          echo "sdk.dir=$ANDROID_HOME" > local.properties
           chmod +x gradlew
-          ./gradlew assembleDebug --no-daemon
+          ./gradlew assembleDebug --no-daemon --stacktrace
 
       - name: Publicar archivo APK para descargar
         uses: actions/upload-artifact@v4
         with:
           name: Broters_Almacen-APK
-          path: android/app/build/outputs/apk/debug/app-debug.apk
+          path: android/app/build/outputs/apk/**/*.apk
           retention-days: 14
