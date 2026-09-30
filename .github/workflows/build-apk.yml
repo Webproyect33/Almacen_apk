@@ -14,13 +14,15 @@ jobs:
       - name: Descargar repositorio
         uses: actions/checkout@v4
 
-      - name: Descomprimir archivo ZIP si existe
+      - name: Descomprimir archivos ZIP del proyecto
         run: |
-          if ls *.zip 1> /dev/null 2>&1; then
-            echo "Descomprimiendo archivo .zip..."
-            unzip -o *.zip
-            rm -f *.zip || true
-          fi
+          shopt -s nullglob
+          for f in *.zip; do
+            if [ -f "$f" ]; then
+              echo "Descomprimiendo archivo: $f"
+              unzip -o "$f"
+            fi
+          done
 
       - name: Configurar Node.js
         uses: actions/setup-node@v4
@@ -34,14 +36,14 @@ jobs:
           java-version: 17
 
       - name: Instalar dependencias del proyecto
-        run: npm install
+        run: npm install --legacy-peer-deps
 
-      - name: Compilar aplicación web
-        run: npm run build
+      - name: Compilar interfaz móvil (100% Offline)
+        run: npx vite build
 
       - name: Instalar Capacitor 6 Android (Compatible y Estable)
         run: |
-          npm install @capacitor/core@6.2.0 @capacitor/cli@6.2.0 @capacitor/android@6.2.0
+          npm install @capacitor/core@6.2.0 @capacitor/cli@6.2.0 @capacitor/android@6.2.0 --legacy-peer-deps
           npx cap add android || true
           npx cap sync android
 
